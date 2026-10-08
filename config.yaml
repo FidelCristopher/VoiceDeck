@@ -1,0 +1,39 @@
+app:
+  name: "VoiceDeck"
+  version: "1.0.0"
+  language: "en" # 'en' or 'id'
+  panic_hotkey: "ctrl+shift+m" # Emergency mute/unmute
+
+audio:
+  device_index: null # null = system default microphone
+  sample_rate: 16000 # Vosk recommended 16kHz
+  chunk_size: 4000   # ~0.25 seconds per chunk
+  silence_threshold_rms: 0.015 # Minimum energy to process
+
+control:
+  debounce_seconds: 1.2 # Cooldown between slide triggers
+  keywords:
+    next:
+      - "next"
+      - "next slide"
+      - "lanjut"
+      - "berikutnya"
+      - "maju"
+    previous:
+      - "previous"
+      - "back"
+      - "kembali"
+      - "mundur"
+      - "sebelumnya"
+    highlight:
+      - "highlight"
+      - "sorot"
+      - "tandai"
+      - "garis bawahi"
+
+overlay:
+  enabled: true
+  auto_fade_seconds: 3.5
+  highlight_color: "#FFE50088" # Semi-transparent yellow
+  underline_color: "#FF3366DD" # Vivid pink/red underline
+  border_radius: 6
