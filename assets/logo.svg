@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0f19" />
+      <stop offset="50%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#030712" />
+    </linearGradient>
+
+    <!-- Slide Deck Glow Gradient -->
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+
+    <!-- Wave & Accent Gradient -->
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#facc15" />
+      <stop offset="100%" stop-color="#f97316" />
+    </linearGradient>
+
+    <!-- Neon Glow Filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Background Card -->
+  <rect width="500" height="500" rx="90" fill="url(#bgGrad)" />
+  <rect width="496" height="496" x="2" y="2" rx="88" fill="none" stroke="#1e293b" stroke-width="2" />
+
+  <!-- Presentation Deck Screen Outer Shape -->
+  <g filter="url(#softShadow)">
+    <rect x="90" y="100" width="320" height="205" rx="20" fill="#1e293b" stroke="#334155" stroke-width="3" />
+    <rect x="98" y="108" width="304" height="189" rx="14" fill="#0f172a" />
+  </g>
+
+  <!-- Presentation Stand -->
+  <path d="M225 305 L275 305 L285 360 L215 360 Z" fill="#334155" />
+  <rect x="180" y="360" width="140" height="12" rx="6" fill="#475569" />
+
+  <!-- Screen Content: Modern Pitch Slide Elements -->
+  <!-- Top Slide Progress Bar -->
+  <rect x="120" y="128" width="80" height="6" rx="3" fill="url(#primaryGrad)" />
+  <rect x="210" y="128" width="40" height="6" rx="3" fill="#334155" />
+  <rect x="260" y="128" width="40" height="6" rx="3" fill="#334155" />
+
+  <!-- Slide Highlight Underline Accent -->
+  <rect x="120" y="152" width="140" height="12" rx="4" fill="url(#accentGrad)" filter="url(#glow)" />
+  <rect x="120" y="176" width="190" height="8" rx="4" fill="#475569" opacity="0.6" />
+  <rect x="120" y="194" width="130" height="8" rx="4" fill="#475569" opacity="0.4" />
+
+  <!-- Right Slide Next Arrow (Voice Navigation) -->
+  <path d="M340 185 L365 202 L340 219" fill="none" stroke="url(#primaryGrad)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+
+  <!-- Centered Floating Voice Emblem (Microphone + Sound Waves) -->
+  <g filter="url(#softShadow)">
+    <!-- Glowing Outer Circle -->
+    <circle cx="250" cy="245" r="46" fill="#0b0f19" stroke="url(#primaryGrad)" stroke-width="3" filter="url(#glow)"/>
+    
+    <!-- Sound Waves (Left & Right) -->
+    <!-- Left Waves -->
+    <path d="M190 230 C182 238, 182 252, 190 260" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+    <path d="M178 220 C166 233, 166 257, 178 270" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+    
+    <!-- Right Waves -->
+    <path d="M310 230 C318 238, 318 252, 310 260" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+    <path d="M322 220 C334 233, 334 257, 322 270" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+
+    <!-- Dynamic Mic Body -->
+    <rect x="241" y="222" width="18" height="28" rx="9" fill="url(#primaryGrad)" />
+    <!-- Mic Arc / Stand -->
+    <path d="M233 234 C233 252, 267 252, 267 234" fill="none" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
+    <path d="M250 252 L250 263" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" />
+  </g>
+
+  <!-- Typography: VOICEDECK -->
+  <text x="250" y="420" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="34" font-weight="800" letter-spacing="4" fill="#f8fafc" text-anchor="middle">
+    VOICE<tspan fill="url(#primaryGrad)">DECK</tspan>
+  </text>
+
+  <!-- Subtitle -->
+  <text x="250" y="445" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" letter-spacing="2.5" fill="#94a3b8" text-anchor="middle">
+    SPEECH PRESENTATION ASSISTANT
+  </text>
+</svg>

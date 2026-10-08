@@ -1,119 +1,192 @@
-# VoiceDeck 🎤⚡
-> **Hands-Free Pitching Assistant:** Kontrol slide presentasi dan sorot kata-kata kunci di layar hanya dengan suara Anda secara 100% offline.
+<p align="center">
+  <img src="assets/logo.png" alt="VoiceDeck Logo" width="380" />
+</p>
+
+<h1 align="center">VoiceDeck</h1>
+
+<p align="center">
+  <strong>Hands-Free Presentation & Pitching Assistant with Real-Time Speech Architecture</strong><br />
+  Advance slides, navigate seamlessly, and highlight crucial metrics on screen using only your voice — 100% offline and low-latency.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-blue?logo=python" alt="Python" />
+  <img src="https://img.shields.io/badge/Offline-100%25%20On--Device-success" alt="Offline" />
+  <img src="https://img.shields.io/badge/GUI-PyQt6-darkgreen" alt="PyQt6" />
+  <img src="https://img.shields.io/badge/Latency-%3C100ms-brightgreen" alt="Latency" />
+  <img src="https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows" alt="Platform" />
+</p>
+
+---
+
+## 💡 Overview
+
+When presenting pitch decks or competing in high-stakes startup competitions, manual clickers or laptop trackpads disrupt eye contact, body language, and storytelling flow. Furthermore, drawing audience focus to critical numbers (e.g., *Revenue, CAC, LTV, Growth Rate*) usually requires manual pointers.
+
+**VoiceDeck** solves this by acting as an invisible AI stage assistant:
+- **Zero Clicker Navigation:** Speak triggers like *"Next slide"* or *"Go back"* to navigate slides across any presentation software (PowerPoint, Google Slides, PDF full screen, Keynote, Canva, Reveal.js).
+- **Voice-Activated Highlighting:** Say *"Highlight revenue"* or *"Highlight traction"* to dynamically project glowing, high-visibility annotations and banners directly over your slides.
+- **100% On-Device & Stage-Ready:** Operates completely offline with zero internet dependency, eliminating risks associated with unstable venue Wi-Fi.
 
 ---
 
 ## 🏗️ Speech & System Architecture
 
-VoiceDeck dirancang dengan arsitektur audio streaming berlatensi rendah:
+VoiceDeck leverages a streaming, dual-speed speech processing pipeline engineered for instant reaction times and rock-solid stability under stage noise:
 
 ```
-[ Microphone (16kHz PCM Stream) ]
-                │
-                ▼
-      [ AudioCapture & Ring Buffer ]
-                │
-                ├───> [ Energy VAD / Noise Adaptation ]
-                │
-                ▼
-     [ Vosk ASR Engine (Offline / Local) ]
-                │
-                ├───> Partial Result Stream (<100ms) ──> [ Fast KWS Triggers ]
-                └───> Final Transcript Stream        ──> [ Intent Parser ]
-                                                              │
-                     ┌────────────────────────────────────────┴────────────────────────────────────────┐
-                     ▼                                                                                 ▼
-          [ SlideController ]                                                             [ HighlightOverlay ]
-     (Simulates Key.right / Key.left)                                                  (Transparent Click-Through Canvas)
-     PowerPoint / PDF / Canva slides                                                   Visual highlight banner & feedback
+                  [ Microphone Input (16kHz PCM Stream) ]
+                                     │
+                                     ▼
+                      [ AudioCapture & Ring Buffer ]
+                                     │
+                                     ├───> [ Energy VAD & Dynamic Noise Adaptation ]
+                                     │
+                                     ▼
+                     [ Vosk ASR Engine (Local / Offline) ]
+                                     │
+                   ┌─────────────────┴─────────────────┐
+                   ▼                                   ▼
+        [ Partial Result Stream ]             [ Final Transcript Stream ]
+         (Ultra-low latency <100ms)               (Full Utterance Intent)
+                   │                                   │
+                   ▼                                   ▼
+         [ Intent Parser (KWS) ]              [ Entity & Intent Parser ]
+          - "next", "lanjut"                   - "highlight <keyword>"
+          - "back", "kembali"                  - "clear"
+                   │                                   │
+                   ▼                                   ▼
+         [ SlideController ]                  [ HighlightOverlay ]
+     (Simulates Key.right / Key.left)     (Transparent Click-Through Canvas)
+     - Smart Cooldown Debounce (1.2s)     - Always-on-top HUD
+     - Prevents double-trigger            - Neon spotlight & auto-fade (3.5s)
 ```
 
-### Keunggulan Utama untuk Panggung Pitching:
-1. **100% On-Device / Offline:** Tidak membutuhkan koneksi internet. Aman dari gangguan Wi-Fi di venue lomba.
-2. **Dual-Speed Response:** Menggunakan *Partial Result Stream* untuk deteksi kata `"next"` / `"back"` secepat menekan clicker fisik (<100 ms).
-3. **Transparent Click-Through Overlay:** Window transparan selalu di atas (always-on-top) tanpa mengganggu klik mouse atau fokus software presentasi Anda.
-4. **Smart Debounce:** Mencegah perpindahan slide ganda saat presenter berbicara cepat.
+### Architectural Highlights
+1. **Low-Latency Partial Streaming:** Decodes streaming audio frames continuously. Fast navigation keywords trigger slide switches immediately without waiting for long sentence pauses.
+2. **Transparent Click-Through Overlay:** Built with PyQt6 with `Qt.WindowStaysOnTopHint`, `WA_TranslucentBackground`, and `WA_TransparentForInput`. All mouse clicks pass directly through to your presentation.
+3. **Anti Double-Trigger Debouncing:** Intelligent cooldown timer ensures rapid presenter speech does not accidentally skip multiple slides.
+4. **Emergency Panic Switch:** One-click mute toggle and global hotkeys prevent false activations during Q&A sessions with judges.
 
 ---
 
-## 🚀 Cara Menjalankan
+## 🚀 Quick Start
 
-### Opsi 1: Menggunakan Script Windows (Paling Mudah)
-Cukup buka folder `C:\Users\Pongo\VoiceDeck` di File Explorer, lalu **double-click** file:
-```
+### Option 1: One-Click Windows Launch (Recommended)
+Navigate to `C:\Users\Pongo\VoiceDeck` in Windows File Explorer and double-click:
+```bat
 run.bat
 ```
 
-### Opsi 2: Menggunakan Terminal (PowerShell / Command Prompt)
+### Option 2: Terminal / PowerShell
 ```powershell
+# 1. Navigate to directory
 cd C:\Users\Pongo\VoiceDeck
+
+# 2. Run with the pre-configured virtual environment
 .\.venv\Scripts\python.exe main.py
 ```
-*(Saat pertama kali dijalankan, VoiceDeck akan otomatis mengunduh model kecil Vosk ~39MB ke folder `models/`)*
+*(On first execution, VoiceDeck automatically verifies and sets up the offline Vosk speech model in `models/`)*
 
 ---
 
-## 🗣️ Perintah Suara Bawaan (Default Voice Commands)
+## 🗣️ Supported Voice Commands
 
-| Aksi | Perintah Bahasa Inggris | Perintah Bahasa Indonesia |
+| Action | English Triggers | Indonesian Triggers |
 | :--- | :--- | :--- |
-| **Maju Slide** | `"next"`, `"next slide"` | `"lanjut"`, `"berikutnya"`, `"maju"` |
-| **Mundur Slide** | `"back"`, `"previous"` | `"kembali"`, `"mundur"`, `"sebelumnya"` |
-| **Highlight Kata** | `"highlight <kata>"` | `"sorot <kata>"`, `"tandai <kata>"` |
+| **Next Slide** | `"next"`, `"next slide"`, `"forward"` | `"lanjut"`, `"berikutnya"`, `"maju"` |
+| **Previous Slide** | `"back"`, `"previous"`, `"go back"` | `"kembali"`, `"mundur"`, `"sebelumnya"` |
+| **Highlight Text** | `"highlight <word>"`, `"mark <word>"` | `"sorot <kata>"`, `"tandai <kata>"` |
+| **Clear Highlight** | `"clear"`, `"clear highlight"` | `"hapus"`, `"hilangkan"` |
 
-> *Contoh:*
-> - Bicara: *"Next slide"* ➔ Slide berpindah ke kanan.
-> - Bicara: *"Highlight revenue"* ➔ Layar menampilkan animasi sorot kuning menyala: **✨ REVENUE**.
+> **Real Stage Examples:**
+> - *"Moving on to the **next slide**..."* ➔ Slide advances immediately.
+> - *"Please **highlight revenue** here..."* ➔ Displays glowing banner: **✨ REVENUE**.
 
 ---
 
-## ⚙️ Konfigurasi (`config.yaml`)
+## ⚙️ Configuration (`config.yaml`)
 
-Anda dapat menyesuaikan kata kunci, sensitivitas audio, dan warna sorotan di `config.yaml`:
+Customize trigger words, audio sensitivity, and overlay visual parameters directly:
 
 ```yaml
 app:
-  language: "en" # 'en' (Inggris) atau 'id' (Indonesia)
+  name: "VoiceDeck"
+  version: "1.0.0"
+  language: "en" # 'en' (English) or custom model
+  panic_hotkey: "ctrl+shift+m"
+
+audio:
+  sample_rate: 16000
+  chunk_size: 4000
+  silence_threshold_rms: 0.015
 
 control:
-  debounce_seconds: 1.2 # Jeda minimum antar perpindahan slide
+  debounce_seconds: 1.2 # Cooldown between slide transitions
   keywords:
     next:
       - "next"
+      - "next slide"
       - "lanjut"
       - "berikutnya"
+    previous:
+      - "previous"
+      - "back"
+      - "kembali"
     highlight:
       - "highlight"
       - "sorot"
       - "tandai"
 
 overlay:
-  auto_fade_seconds: 3.5 # Durasi highlight bertahan di layar
+  auto_fade_seconds: 3.5
+  highlight_color: "#FFE50088"
 ```
 
 ---
 
-## 📂 Struktur Project
+## 📂 Project Directory Structure
 
-```
+```text
 VoiceDeck/
-├── config.yaml                     # Konfigurasi trigger & timing
-├── requirements.txt                # Dependensi Python
-├── run.bat                         # Launcher Windows
-├── main.py                         # Application Entry Point
+├── assets/
+│   └── logo.svg                    # Vector brand logo
+├── config.yaml                     # Application settings & keyword triggers
+├── requirements.txt                # Python dependencies
+├── run.bat                         # Windows one-click launcher
+├── main.py                         # Application entrypoint & worker coordinator
+├── README.md                       # Documentation & architecture specifications
+├── tests/
+│   └── test_pipeline.py            # End-to-end pipeline verification test
 ├── voicedeck/
 │   ├── audio/
-│   │   ├── capture.py              # Thread-safe mic capture & volume metering
-│   │   └── vad.py                  # Voice Activity Detection (Energy & Adaptive Floor)
+│   │   ├── capture.py              # Threaded audio capture, ring buffer & VU meter
+│   │   └── vad.py                  # Energy VAD with adaptive noise floor tracker
 │   ├── engine/
-│   │   └── speech_engine.py        # Vosk local speech recognition engine
+│   │   └── speech_engine.py        # Vosk Kaldi offline speech recognizer
 │   ├── controller/
-│   │   ├── slide_controller.py     # Keyboard dispatcher (Right/Left) + debounce
-│   │   └── intent_parser.py        # Intent & keyword entity extraction
+│   │   ├── slide_controller.py     # Keyboard dispatcher (Right/Left) & debouncing
+│   │   └── intent_parser.py        # NLP regex & entity extractor
 │   ├── overlay/
-│   │   └── canvas.py               # Transparent always-on-top HUD & highlighter
+│   │   └── canvas.py               # Transparent click-through overlay window
 │   ├── ui/
-│   │   └── app.py                  # PyQt6 Control Dashboard
+│   │   └── app.py                  # PyQt6 Control Dashboard & live monitor
 │   └── downloader.py               # Automatic model manager
-└── models/                         # Penyimpanan model ASR offline
+└── models/
+    └── vosk-model-small-en-us-0.15/ # Pre-bundled offline ASR model
 ```
+
+---
+
+## 🧪 Running Verification Tests
+
+Run the built-in test suite to verify the audio VAD, intent parser, and local Vosk engine without needing a microphone:
+
+```powershell
+.\.venv\Scripts\python.exe tests/test_pipeline.py
+```
+
+---
+
+## 📄 License
+MIT License. Built for presenters, startup founders, and public speakers.
