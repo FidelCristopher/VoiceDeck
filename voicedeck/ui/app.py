@@ -1,6 +1,6 @@
-import sys
-import threading
-from typing import Dict, Any
+import os
+from pathlib import Path
+from typing import Dict, Any, List, Tuple
 from PyQt6.QtCore import Qt, pyqtSignal, QObject
 from PyQt6.QtWidgets import (
     QMainWindow,
@@ -12,8 +12,9 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QProgressBar,
     QTextEdit,
-    QSlider,
     QGroupBox,
+    QFileDialog,
+    QSpinBox,
 )
 
 from voicedeck.audio.capture import AudioCapture
@@ -22,20 +23,23 @@ from voicedeck.audio.capture import AudioCapture
 class WorkerSignals(QObject):
     transcript_received = pyqtSignal(str, bool)  # text, is_final
     action_triggered = pyqtSignal(str)          # NEXT, PREVIOUS
-    highlight_triggered = pyqtSignal(str)       # target_word
+    highlight_triggered = pyqtSignal(str, list, float)  # target_word, boxes, aspect_ratio
     volume_changed = pyqtSignal(float)          # rms level
     status_changed = pyqtSignal(str)
+    slide_page_changed = pyqtSignal(int, int)   # current_page_idx, total_pages
 
 
 class VoiceDeckMainWindow(QMainWindow):
-    def __init__(self, config: Dict[str, Any], signals: WorkerSignals):
+    def __init__(self, config: Dict[str, Any], signals: WorkerSignals, on_load_pdf_cb=None, on_slide_change_cb=None):
         super().__init__()
         self.config = config
         self.signals = signals
+        self.on_load_pdf_cb = on_load_pdf_cb
+        self.on_slide_change_cb = on_slide_change_cb
 
         self.setWindowTitle(f"VoiceDeck v{config.get('app', {}).get('version', '1.0.0')} - Pitch Assistant")
-        self.resize(520, 620)
-        self.setMinimumSize(450, 500)
+        self.resize(560, 680)
+        self.setMinimumSize(480, 560)
 
         self._init_ui()
         self._connect_signals()
@@ -44,10 +48,10 @@ class VoiceDeckMainWindow(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setSpacing(12)
+        main_layout.setSpacing(10)
         main_layout.setContentsMargins(16, 16, 16, 16)
 
-        # Title / Pitch status header
+        # Title & Active/Mute toggle
         header_layout = QHBoxLayout()
         title_label = QLabel("🎤 VoiceDeck Studio")
         title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #0284c7;")
@@ -64,7 +68,50 @@ class VoiceDeckMainWindow(QMainWindow):
         header_layout.addWidget(self.mute_btn)
         main_layout.addLayout(header_layout)
 
-        # 1. Audio Device Selection
+        # 1. Slide Deck / PDF Integration Group
+        pdf_group = QGroupBox("Slide Deck Integration (Precise In-Slide Highlighter)")
+        pdf_layout = QVBoxLayout(pdf_group)
+
+        pdf_top_row = QHBoxLayout()
+        self.btn_load_pdf = QPushButton("📂 Load Presentation PDF...")
+        self.btn_load_pdf.setStyleSheet(
+            "background-color: #334155; color: #f8fafc; font-weight: 600; padding: 5px 12px; border-radius: 5px;"
+        )
+        self.btn_load_pdf.clicked.connect(self._on_choose_pdf)
+        self.lbl_pdf_name = QLabel("No PDF loaded (HUD mode only)")
+        self.lbl_pdf_name.setStyleSheet("color: #94a3b8; font-style: italic;")
+
+        pdf_top_row.addWidget(self.btn_load_pdf)
+        pdf_top_row.addWidget(self.lbl_pdf_name, 1)
+        pdf_layout.addLayout(pdf_top_row)
+
+        # Slide page tracker controls
+        page_row = QHBoxLayout()
+        self.lbl_current_slide = QLabel("Current Slide:")
+        self.spin_page = QSpinBox()
+        self.spin_page.setRange(1, 1)
+        self.spin_page.setEnabled(False)
+        self.spin_page.valueChanged.connect(self._on_spin_page_changed)
+        self.lbl_total_pages = QLabel("of 1")
+
+        self.btn_sync_prev = QPushButton("◀ Prev")
+        self.btn_sync_next = QPushButton("Next ▶")
+        self.btn_sync_prev.setEnabled(False)
+        self.btn_sync_next.setEnabled(False)
+        self.btn_sync_prev.clicked.connect(lambda: self.signals.action_triggered.emit("PREVIOUS"))
+        self.btn_sync_next.clicked.connect(lambda: self.signals.action_triggered.emit("NEXT"))
+
+        page_row.addWidget(self.lbl_current_slide)
+        page_row.addWidget(self.spin_page)
+        page_row.addWidget(self.lbl_total_pages)
+        page_row.addStretch()
+        page_row.addWidget(self.btn_sync_prev)
+        page_row.addWidget(self.btn_sync_next)
+        pdf_layout.addLayout(page_row)
+
+        main_layout.addWidget(pdf_group)
+
+        # 2. Audio Device Selection & Level Meter
         audio_group = QGroupBox("Microphone & Audio Input")
         audio_layout = QVBoxLayout(audio_group)
 
@@ -76,7 +123,6 @@ class VoiceDeckMainWindow(QMainWindow):
         dev_row.addWidget(self.device_combo, 1)
         audio_layout.addLayout(dev_row)
 
-        # VU Volume Meter
         meter_row = QHBoxLayout()
         meter_label = QLabel("Level:")
         self.volume_bar = QProgressBar()
@@ -84,30 +130,13 @@ class VoiceDeckMainWindow(QMainWindow):
         self.volume_bar.setValue(0)
         self.volume_bar.setTextVisible(False)
         self.volume_bar.setStyleSheet(
-            "QProgressBar::chunk { background-color: #3b82f6; border-radius: 3px; }"
+            "QProgressBar::chunk { background-color: #38bdf8; border-radius: 3px; }"
         )
         meter_row.addWidget(meter_label)
         meter_row.addWidget(self.volume_bar)
         audio_layout.addLayout(meter_row)
 
         main_layout.addWidget(audio_group)
-
-        # 2. Controls & Testing Sandbox
-        test_group = QGroupBox("Quick Testing / Manual Override")
-        test_layout = QHBoxLayout(test_group)
-
-        self.btn_test_prev = QPushButton("⬅ Prev Slide")
-        self.btn_test_next = QPushButton("➡ Next Slide")
-        self.btn_test_hl = QPushButton("✨ Highlight Demo")
-
-        self.btn_test_prev.clicked.connect(lambda: self.signals.action_triggered.emit("PREVIOUS"))
-        self.btn_test_next.clicked.connect(lambda: self.signals.action_triggered.emit("NEXT"))
-        self.btn_test_hl.clicked.connect(lambda: self.signals.highlight_triggered.emit("Key Traction Metric"))
-
-        test_layout.addWidget(self.btn_test_prev)
-        test_layout.addWidget(self.btn_test_next)
-        test_layout.addWidget(self.btn_test_hl)
-        main_layout.addWidget(test_group)
 
         # 3. Live Speech Activity Log
         log_group = QGroupBox("Live Voice Transcripts & Actions")
@@ -138,19 +167,56 @@ class VoiceDeckMainWindow(QMainWindow):
         self.signals.highlight_triggered.connect(self._on_highlight_log)
         self.signals.volume_changed.connect(self._update_volume_bar)
         self.signals.status_changed.connect(self.status_label.setText)
+        self.signals.slide_page_changed.connect(self._update_page_tracker)
+
+    def _on_choose_pdf(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Presentation PDF",
+            "",
+            "PDF Files (*.pdf)",
+        )
+        if file_path and self.on_load_pdf_cb:
+            self.on_load_pdf_cb(file_path)
+
+    def set_pdf_loaded(self, filename: str, total_pages: int):
+        self.lbl_pdf_name.setText(f"📄 {filename}")
+        self.lbl_pdf_name.setStyleSheet("color: #22c55e; font-weight: bold;")
+        self.spin_page.setEnabled(True)
+        self.spin_page.setRange(1, total_pages)
+        self.spin_page.setValue(1)
+        self.lbl_total_pages.setText(f"of {total_pages}")
+        self.btn_sync_prev.setEnabled(True)
+        self.btn_sync_next.setEnabled(True)
+        self.log_text.append(f"<span style='color: #22c55e;'>✔ Loaded '{filename}' ({total_pages} slides).</span>")
+
+    def _update_page_tracker(self, current_page_idx: int, total_pages: int):
+        self.spin_page.blockSignals(True)
+        self.spin_page.setValue(current_page_idx + 1)
+        self.spin_page.blockSignals(False)
+        self.lbl_total_pages.setText(f"of {total_pages}")
+
+    def _on_spin_page_changed(self, val: int):
+        if self.on_slide_change_cb:
+            self.on_slide_change_cb(val - 1)
 
     def _append_transcript(self, text: str, is_final: bool):
         if is_final:
             self.log_text.append(f"<span style='color: #a78bfa;'>🗣 [Heard]:</span> {text}")
-        else:
-            # could display transient partial transcript if desired
-            pass
 
     def _on_action_log(self, action: str):
         self.log_text.append(f"<span style='color: #38bdf8; font-weight: bold;'>⚡ [TRIGGER]: {action} SLIDE</span>")
 
-    def _on_highlight_log(self, word: str):
-        self.log_text.append(f"<span style='color: #facc15; font-weight: bold;'>💡 [HIGHLIGHT]: '{word}'</span>")
+    def _on_highlight_log(self, word: str, boxes: list, aspect_ratio: float):
+        box_count = len(boxes)
+        if box_count > 0:
+            self.log_text.append(
+                f"<span style='color: #facc15; font-weight: bold;'>💡 [HIGHLIGHT]: '{word}' (Targeted {box_count} match on slide)</span>"
+            )
+        else:
+            self.log_text.append(
+                f"<span style='color: #facc15; font-weight: bold;'>💡 [HIGHLIGHT]: '{word}' (HUD badge)</span>"
+            )
 
     def _update_volume_bar(self, rms: float):
         percent = int(min(1.0, rms * 15.0) * 100)
