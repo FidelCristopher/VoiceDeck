@@ -27,15 +27,16 @@ class HighlightOverlay(QWidget):
         self.fade_timer.timeout.connect(self._clear_highlight)
 
     def _setup_window_properties(self):
-        # Frameless, transparent, stays on top, tool window (no alt-tab clutter)
+        # Frameless, transparent, stays on top, tool window (no alt-tab clutter), click-through
         flags = (
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.WindowTransparentForInput
             | Qt.WindowType.Tool
         )
         self.setWindowFlags(flags)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForInput, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
         # Full screen coverage
         screen = QApplication.primaryScreen()
