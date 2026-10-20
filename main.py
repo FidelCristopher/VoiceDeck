@@ -3,6 +3,7 @@ import threading
 import time
 import yaml
 from pathlib import Path
+from typing import List
 
 from PyQt6.QtWidgets import QApplication
 
@@ -48,6 +49,12 @@ class VoiceDeckApp:
         )
         self.slide_indexer = SlideIndexer()
 
+        # Cache base keywords for grammar biasing
+        self.base_keywords: List[str] = []
+        for kw_list in self.config.get("control", {}).get("keywords", {}).values():
+            self.base_keywords.extend(kw_list)
+        self.base_keywords.extend(["clear", "hapus", "hilangkan"])
+
         # Audio capture setup
         audio_cfg = self.config.get("audio", {})
         self.audio_capture = AudioCapture(
@@ -61,20 +68,33 @@ class VoiceDeckApp:
     def _on_audio_level(self, rms: float):
         self.signals.volume_changed.emit(rms)
 
+    def _apply_slide_context(self, page_index: int):
+        """Dynamic Context Biasing: updates recognition grammar to active slide vocabulary."""
+        if not self.config.get("context_biasing", {}).get("enabled", True):
+            return
+
+        if self.slide_indexer.is_loaded():
+            slide_vocab = self.slide_indexer.get_slide_vocabulary(page_index)
+            self.speech_engine.set_dynamic_context(slide_vocab, self.base_keywords)
+
     def on_load_pdf(self, file_path: str):
         if self.slide_indexer.load_pdf(file_path):
             filename = Path(file_path).name
             total_pages = self.slide_indexer.page_count
-            self.main_window.set_pdf_loaded(filename, total_pages)
+            vocab = self.slide_indexer.get_slide_vocabulary(0)
+            self._apply_slide_context(0)
+            self.main_window.set_pdf_loaded(filename, total_pages, len(vocab))
 
     def on_slide_change(self, page_index: int):
         self.slide_indexer.set_page(page_index)
+        self._apply_slide_context(page_index)
 
     def _trigger_next(self):
         if self.slide_controller.next_slide():
             self.signals.action_triggered.emit("NEXT")
             if self.slide_indexer.is_loaded():
                 curr = self.slide_indexer.next_page()
+                self._apply_slide_context(curr)
                 self.signals.slide_page_changed.emit(curr, self.slide_indexer.page_count)
             self.speech_engine.reset()
 
@@ -83,6 +103,7 @@ class VoiceDeckApp:
             self.signals.action_triggered.emit("PREVIOUS")
             if self.slide_indexer.is_loaded():
                 curr = self.slide_indexer.prev_page()
+                self._apply_slide_context(curr)
                 self.signals.slide_page_changed.emit(curr, self.slide_indexer.page_count)
             self.speech_engine.reset()
 
@@ -122,8 +143,20 @@ class VoiceDeckApp:
             elif intent == "HIGHLIGHT":
                 self._trigger_highlight(arg or "highlight")
             elif intent == "CLEAR":
-                # Clear overlay
                 self.signals.action_triggered.emit("CLEAR")
+            else:
+                # Proactive Auto-Highlight check if enabled in config
+                if (
+                    self.config.get("context_biasing", {}).get("auto_highlight", False)
+                    and self.slide_indexer.is_loaded()
+                ):
+                    min_len = self.config.get("context_biasing", {}).get("min_term_length", 3)
+                    words = [w for w in text.split() if len(w) >= min_len]
+                    for w in words:
+                        boxes = self.slide_indexer.find_phrase_boxes(w)
+                        if boxes:
+                            self._trigger_highlight(w)
+                            break
 
         while self.is_running:
             chunk = self.audio_capture.read_chunk(timeout=0.2)
@@ -149,7 +182,9 @@ class VoiceDeckApp:
         self.main_window.show()
 
         # Setup Transparent Overlay
-        overlay = HighlightOverlay()
+        overlay = HighlightOverlay(
+            auto_fade_ms=int(self.config.get("overlay", {}).get("auto_fade_seconds", 4.0) * 1000)
+        )
         overlay.show()
 
         # Wire overlay to signals

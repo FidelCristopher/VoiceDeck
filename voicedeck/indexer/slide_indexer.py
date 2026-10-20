@@ -82,6 +82,23 @@ class SlideIndexer:
             self.current_page_idx -= 1
         return self.current_page_idx
 
+    def get_slide_vocabulary(self, page_index: Optional[int] = None) -> List[str]:
+        """
+        Extracts clean unique words and terms from the specified slide (or active slide)
+        for dynamic grammar context biasing.
+        """
+        idx = self.current_page_idx if page_index is None else page_index
+        if not self.is_loaded() or idx >= len(self.pages_words):
+            return []
+
+        vocab_set = set()
+        for w in self.pages_words[idx]:
+            clean = w.text.strip().lower().strip(".,;:?!'\"()[]{}%$#@*~`")
+            if len(clean) >= 2 and clean.isalnum():
+                vocab_set.add(clean)
+
+        return sorted(list(vocab_set))
+
     def set_page(self, page_index: int):
         if 0 <= page_index < self.page_count:
             self.current_page_idx = page_index

@@ -171,7 +171,7 @@ class HighlightOverlay(QWidget):
 
             painter.setPen(QColor(255, 255, 255))
             painter.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
-            arrow = "➡ " if self.active_action == "NEXT" else "⬅ "
+            arrow = ">> " if self.active_action == "NEXT" else "<< "
             painter.drawText(
                 QRect(badge_x, badge_y, badge_w, badge_h),
                 Qt.AlignmentFlag.AlignCenter,
@@ -216,7 +216,7 @@ class HighlightOverlay(QWidget):
 
         # 4. Floating Badge (HUD Notification)
         if self.active_text:
-            matched_msg = f"✨ HIGHLIGHT: {self.active_text.upper()}"
+            matched_msg = f"HIGHLIGHT: {self.active_text.upper()}"
             if self.highlight_boxes:
                 matched_msg += f" ({len(self.highlight_boxes)} on slide)"
 
