@@ -5,8 +5,8 @@
 <h1 align="center">VoiceDeck</h1>
 
 <p align="center">
-  <strong>Hands-Free Stage Presentation Assistant with Real-Time Speech Architecture & Dynamic Context Biasing</strong><br />
-  Control presentation slides, navigate hands-free, and dynamically highlight crucial metrics on screen with zero latency — 100% offline and on-device.
+  <strong>Hands-Free Stage Presentation Assistant with Real-Time Speech Architecture and Dynamic Context Biasing</strong><br />
+  Control presentation slides, navigate hands-free, and dynamically highlight crucial metrics on screen with zero latency - 100% offline and on-device.
 </p>
 
 <p align="center">
@@ -22,21 +22,21 @@
 ---
 
 ## Table of Contents
-- [Problem & Motivation](#-problem--motivation)
-- [System & Speech Architecture](#-system--speech-architecture)
-- [Dynamic Context Biasing (Speech RAG)](#-dynamic-context-biasing-speech-rag)
-- [Benchmarking & Latency Analysis](#-benchmarking--latency-analysis)
-- [Quick Start](#-quick-start)
-- [Stage Workflow Guide](#-stage-workflow-guide)
-- [Voice Commands Reference](#-voice-commands-reference)
-- [Configuration Reference (`config.yaml`)](#-configuration-reference-configyaml)
-- [Directory Structure](#-directory-structure)
-- [Verification Test Suite](#-verification-test-suite)
-- [License](#-license)
+- [Problem and Motivation](#problem-and-motivation)
+- [System and Speech Architecture](#system-and-speech-architecture)
+- [Dynamic Context Biasing (Speech RAG)](#dynamic-context-biasing-speech-rag)
+- [Benchmarking and Latency Analysis](#benchmarking-and-latency-analysis)
+- [Quick Start](#quick-start)
+- [Stage Workflow Guide](#stage-workflow-guide)
+- [Voice Commands Reference](#voice-commands-reference)
+- [Configuration Reference (config.yaml)](#configuration-reference-configyaml)
+- [Directory Structure](#directory-structure)
+- [Verification Test Suite](#verification-test-suite)
+- [License](#license)
 
 ---
 
-## 💡 Problem & Motivation
+## Problem and Motivation
 
 During high-stakes pitching sessions, startup competitions, and keynote talks, speakers face two major friction points:
 1. **Broken Body Language:** Holding physical presenter clickers or touching laptop trackpads restricts hand gestures, eye contact, and pacing.
@@ -47,37 +47,38 @@ During high-stakes pitching sessions, startup competitions, and keynote talks, s
 
 ---
 
-## 🏗️ System & Speech Architecture
+## System and Speech Architecture
 
 VoiceDeck is designed around an asynchronous, multi-threaded audio and computer vision pipeline:
 
 ```text
                [ Microphone Input (16kHz 16-bit Mono PCM) ]
-                                     │
-                                     ▼
-                      [ AudioCapture & Ring Buffer ]
-                                     │
-                                     ├───> [ Energy VAD & Adaptive Noise Floor ]
-                                     │
-                                     ▼
+                                     |
+                                     v
+                      [ AudioCapture and Ring Buffer ]
+                                     |
+                                     +---> [ Energy VAD and Adaptive Noise Floor ]
+                                     |
+                                     v
                      [ Vosk ASR Engine (Kaldi FST) ]
-                                     │
-         ┌───────────────────────────┴───────────────────────────┐
-         ▼                                                       ▼
+                                     |
+         +---------------------------+---------------------------+
+         |                                                       |
+         v                                                       v
 [ Partial Result Stream ]                              [ Final Utterance Stream ]
- (Latency: <30-50 ms)                                    (Intent & Keyword Parse)
-         │                                                       │
-         ▼                                                       ▼
+ (Latency: <30-50 ms)                                    (Intent and Keyword Parse)
+         |                                                       |
+         v                                                       v
 [ Fast Navigation Dispatcher ]                         [ Dynamic Context Biasing ]
  - "next", "lanjut"                                     - Slide Lexical Match
  - "back", "kembali"                                    - Phonetic Fuzzy Matcher
-         │                                                       │
-         ▼                                                       ▼
+         |                                                       |
+         v                                                       v
 [ SlideController (pynput) ]                           [ SlideIndexer (PyMuPDF) ]
  - Keyboard Right/Left Arrow                           - Normalizes (x0, y0, x1, y1)
  - Anti-Double-Click Cooldown                          - Maps to Screen Viewport
-                                                                 │
-                                                                 ▼
+                                                                 |
+                                                                 v
                                                        [ HighlightOverlay (PyQt6) ]
                                                        - Transparent Click-Through Canvas
                                                        - Fluorescent Neon Box (#FEF08A)
@@ -92,7 +93,7 @@ VoiceDeck is designed around an asynchronous, multi-threaded audio and computer 
 
 ---
 
-## 🧠 Dynamic Context Biasing (Speech RAG)
+## Dynamic Context Biasing (Speech RAG)
 
 ### Why Not Traditional LLM RAG?
 Standard RAG pipelines (Vector Embeddings + Local/Cloud LLM) introduce **800 ms to 3,000 ms** of latency and consume gigabytes of VRAM. In a 3-minute pitch competition, a 2-second delay renders voice navigation unusable.
@@ -102,20 +103,20 @@ VoiceDeck utilizes **Grammar-Biased Finite State Transducer (FST) Lexical RAG**:
 
 ```text
 [ Load Presentation PDF ]
-           │
-           ▼
+           |
+           v
 [ SlideIndexer Pre-Processing ]
 Extracts clean vocabulary per page: { "revenue", "quarterly", "traction", "million", ... }
-           │
-           ▼
+           |
+           v
 [ Active Slide Switch Event (e.g., Slide 3) ]
-           │
-           ▼
+           |
+           v
 [ Dynamic Grammar Hot-Swap ]
 Compiles in-memory HCLG Grammar:
   [ "next", "previous", "highlight", "clear", <Slide_3_Tokens>, "[unk]" ]
-           │
-           ▼
+           |
+           v
 [ Instant Decoder Optimization ]
 - Search lattice collapses from 100,000+ words to ~40 words.
 - Acoustic confusion between domain terms drops to near zero.
@@ -125,7 +126,7 @@ Compiles in-memory HCLG Grammar:
 
 ---
 
-## 📊 Benchmarking & Latency Analysis
+## Benchmarking and Latency Analysis
 
 | Pipeline Component | Traditional Cloud ASR | Local Offline Open-Vocab | VoiceDeck Context-Biased |
 | :--- | :--- | :--- | :--- |
@@ -137,7 +138,7 @@ Compiles in-memory HCLG Grammar:
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - **Operating System:** Windows 10 or Windows 11 (64-bit)
@@ -160,20 +161,20 @@ cd C:\Users\Pongo\VoiceDeck
 
 ---
 
-## 🎯 Stage Workflow Guide
+## Stage Workflow Guide
 
 1. **Launch VoiceDeck Studio:** Start `run.bat`.
-2. **Select Microphone:** In the *Microphone & Audio Input* section, pick your wireless clip-on mic or laptop microphone. Observe the VU level bar while speaking.
+2. **Select Microphone:** In the *Microphone and Audio Input* section, pick your wireless clip-on mic or laptop microphone. Observe the VU level bar while speaking.
 3. **Load Presentation:** Click **`Load Presentation PDF...`** and select your pitch deck. VoiceDeck will index all text bounding boxes and activate Dynamic Context Biasing for Slide 1.
 4. **Open Slide Viewer in Full Screen:** Open your PDF in Adobe Acrobat, Edge, Chrome, or SumatraPDF, and press `F5` or `Ctrl + L` for full-screen presentation.
 5. **Pitch Confidently:**
    - Say *"Next slide"* or *"Lanjut"* to change slides.
    - Say *"Highlight revenue"* or *"Highlight traction"* to highlight target words with neon yellow marker and pulsing underline.
-6. **Q&A Panic Switch:** When your pitch concludes and the judges begin Q&A, click the **`Active (Click to Mute)`** button (or use shortcut) to pause recognition, preventing conversational speech from moving your slides.
+6. **Q and A Panic Switch:** When your pitch concludes and the judges begin Q and A, click the **`Active (Click to Mute)`** button (or use shortcut) to pause recognition, preventing conversational speech from moving your slides.
 
 ---
 
-## 🗣️ Voice Commands Reference
+## Voice Commands Reference
 
 | Category | Command Examples (English) | Command Examples (Indonesian) | Action Executed |
 | :--- | :--- | :--- | :--- |
@@ -184,7 +185,7 @@ cd C:\Users\Pongo\VoiceDeck
 
 ---
 
-## ⚙️ Configuration Reference (`config.yaml`)
+## Configuration Reference (config.yaml)
 
 ```yaml
 app:
@@ -233,33 +234,33 @@ overlay:
 
 ---
 
-## 📂 Directory Structure
+## Directory Structure
 
 ```text
 VoiceDeck/
 ├── assets/
 │   ├── logo.png                    # Brand logo
 │   └── logo.svg                    # Scalable vector logo
-├── config.yaml                     # Application settings & keyword definitions
+├── config.yaml                     # Application settings and keyword definitions
 ├── requirements.txt                # Python package dependencies
 ├── run.bat                         # Windows one-click execution script
-├── main.py                         # Application coordinator & background thread worker
-├── README.md                       # Comprehensive architecture & operational guide
+├── main.py                         # Application coordinator and background thread worker
+├── README.md                       # Comprehensive architecture and operational guide
 ├── tests/
 │   ├── test_pipeline.py            # Unit tests for VAD, intent parser, and Vosk engine
 │   ├── test_gui_init.py            # Headless sanity test for PyQt6 GUI and overlay
-│   └── test_slide_indexer.py       # PDF parsing & normalized coordinate tests
+│   └── test_slide_indexer.py       # PDF parsing and normalized coordinate tests
 ├── voicedeck/
 │   ├── audio/
-│   │   ├── capture.py              # Sounddevice audio ingestion & RMS VU meter
+│   │   ├── capture.py              # Sounddevice audio ingestion and RMS VU meter
 │   │   └── vad.py                  # Energy-based VAD with adaptive floor tracker
 │   ├── engine/
 │   │   └── speech_engine.py        # Vosk Kaldi engine with Dynamic Context Biasing
 │   ├── controller/
-│   │   ├── slide_controller.py     # Keyboard injection (pynput) & cooldown debounce
-│   │   └── intent_parser.py        # Regex & entity extraction
+│   │   ├── slide_controller.py     # Keyboard injection (pynput) and cooldown debounce
+│   │   └── intent_parser.py        # Regex and entity extraction
 │   ├── indexer/
-│   │   └── slide_indexer.py        # PyMuPDF word extraction & RapidFuzz matching
+│   │   └── slide_indexer.py        # PyMuPDF word extraction and RapidFuzz matching
 │   ├── overlay/
 │   │   └── canvas.py               # Transparent, click-through Qt overlay canvas
 │   ├── ui/
@@ -271,22 +272,22 @@ VoiceDeck/
 
 ---
 
-## 🧪 Verification Test Suite
+## Verification Test Suite
 
 VoiceDeck includes unit test suites to verify system modules without requiring a live microphone:
 
 ```powershell
-# 1. Test Slide Indexer & Coordinate Mapping
+# 1. Test Slide Indexer and Coordinate Mapping
 .\.venv\Scripts\python.exe tests/test_slide_indexer.py
 
 # 2. Test Audio Pipeline, VAD, and Vosk Model
 .\.venv\Scripts\python.exe tests/test_pipeline.py
 
-# 3. Test GUI & Transparent Overlay Initialization
+# 3. Test GUI and Transparent Overlay Initialization
 .\.venv\Scripts\python.exe tests/test_gui_init.py
 ```
 
 ---
 
-## 📄 License
+## License
 MIT License. Created by [FidelCristopher](https://github.com/FidelCristopher) for speakers, founders, and competitors.
